@@ -20,7 +20,7 @@ export class ThreadIterator {
   constructor(threads: MessageThread[], collapsed: { [key: string]: boolean }) {
     this._threads = threads;
     this._collapsed = collapsed;
-    this._index = 0;
+    this._index = -1;
     this._child = null;
   }
 
