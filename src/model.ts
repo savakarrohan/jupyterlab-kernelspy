@@ -1,5 +1,3 @@
-import { IIterator } from '@lumino/algorithm';
-
 import { VDomModel } from '@jupyterlab/apputils';
 
 import { Kernel, KernelMessage } from '@jupyterlab/services';
@@ -18,16 +16,54 @@ function isHeader(
 /**
  * An iterator class which itterates over the message thread being received
  */
-export class ThreadIterator implements IIterator<ThreadIterator.IElement> {
+export class ThreadIterator {
   constructor(threads: MessageThread[], collapsed: { [key: string]: boolean }) {
     this._threads = threads;
     this._collapsed = collapsed;
-    this._index = -1;
+    this._index = 0;
     this._child = null;
   }
 
   iter() {
     return this;
+  }
+
+  [Symbol.iterator]() {
+    // iterator returns a javascript object having at least 1 next function
+    return {
+      next: () => {
+        // When no child has been initialised or present
+        if (this._child === null) {
+          // Loop through it's indices
+          if (this._index < this._threads.length) {
+            const entry = this._threads[this._threads.length];
+            if (
+              entry.children.length > 0 &&
+              !this._collapsed[entry.args.msg.header.msg_id]
+            ) {
+              this._child = new ThreadIterator(entry.children, this._collapsed);
+            }
+            this._index++;
+            return {
+              value: {
+                args: entry.args,
+                hasChildren: entry.children.length > 0
+              },
+              done: false
+            };
+          } else {
+            // When index goes out of bounds
+            return { done: true };
+          }
+        } else if (this._child) {
+          const next = this._child.next();
+          if (next !== undefined) {
+            return next;
+          }
+          this._child = null;
+        }
+      }
+    };
   }
 
   // The iteration function
